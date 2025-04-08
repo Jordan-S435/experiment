@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shrinking Maze Game</title>
+  <style>
+    /* General Styling */
+    body {
+      font-family: 'Arial', sans-serif;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #121212; /* Dark background */
+      color: #f5f5f5; /* Light text */
+    }
+
+    h1 {
+      margin-bottom: 10px;
+      font-size: 36px;
+    }
+
+    #instructions {
+      margin-bottom: 20px;
+      font-size: 18px;
+      color: #cccccc; /* Light gray instructions */
+    }
+
+    /* Maze Styling */
+    #maze {
+      position: relative;
+      width: 500px; /* Initial maze size */
+      height: 500px; /* Initial maze size */
+      background-color: #1e1e1e; /* Dark gray maze background */
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      grid-template-rows: repeat(10, 1fr);
+      border-radius: 20px; /* Rounded corners */
+      overflow: hidden; /* Prevent player from leaving bounds */
+    }
+
+    .wall {
+      background-color: #333333; /* Walls are darker gray */
+    }
+
+    #player {
+      width: calc(100% / 10); /* Player size relative to maze */
+      height: calc(100% / 10);
+      background-color: #ffffff; /* White player circle */
+      border-radius: 50%; /* Circular player */
+      position: absolute;
+    }
+
+    #exit {
+      width: calc(100% / 10); /* Exit size relative to maze */
+      height: calc(100% / 10);
+      background-color: #76ff03; /* Bright green exit circle */
+      border-radius: 50%; /* Circular exit */
+      position: absolute;
+    }
+  </style>
+</head>
+<body>
+  
+  <div id="maze">
+    <!-- Walls -->
+    <div class="wall" style="grid-column: 3; grid-row: 1;"></div>
+    <div class="wall" style="grid-column: 3; grid-row: 2;"></div>
+    <div class="wall" style="grid-column: 3; grid-row: 3;"></div>
+    <div class="wall" style="grid-column: 4; grid-row: 3;"></div>
+    <div class="wall" style="grid-column: 5; grid-row: 3;"></div>
+    <div class="wall" style="grid-column: 5; grid-row: 4;"></div>
+    <div class="wall" style="grid-column: 5; grid-row: 5;"></div>
+
+    <!-- Player -->
+    <div id="player"></div>
+
+    <!-- Exit -->
+    <div id="exit"></div>
+  </div>
+
+<script>
+// Get references to elements
+const player = document.getElementById('player');
+const exit = document.getElementById('exit');
+const maze = document.getElementById('maze');
+
+// Set initial positions
+let playerPosition = { x: 0, y: 0 };
+const exitPosition = { x: 9, y: 9 };
+
+// Update player position on screen
+function updatePlayerPosition() {
+    const cellSize = maze.offsetWidth / 10;
+    player.style.transform = `translate(${playerPosition.x * cellSize}px, ${playerPosition.y * cellSize}px)`;
+}
+
+// Check if movement is valid
+function canMove(newX, newY) {
+    if (newX < 0 || newY < 0 || newX >= 10 || newY >= 10) return false;
+
+    const walls = document.querySelectorAll('.wall');
+    for (let wall of walls) {
+        const wallColumn = parseInt(wall.style.gridColumn);
+        const wallRow = parseInt(wall.style.gridRow);
+        if (newX + 1 === wallColumn && newY + 1 === wallRow) return false;
+    }
+    
+    return true;
+}
+
+// Handle key presses for movement
+document.addEventListener('keydown', (event) => {
+    let { x, y } = playerPosition;
+
+    switch (event.key) {
+        case 'ArrowUp':
+            if (canMove(x, y - 1)) y--;
+            break;
+        case 'ArrowDown':
+            if (canMove(x, y + 1)) y++;
+            break;
+        case 'ArrowLeft':
+            if (canMove(x - 1, y)) x--;
+            break;
+        case 'ArrowRight':
+            if (canMove(x + 1, y)) x++;
+            break;
+        default:
+            return;
+    }
+
+    playerPosition.x = x;
+    playerPosition.y = y;
+
+    updatePlayerPosition();
+
+    // Check if player reaches the exit
+    if (x === exitPosition.x && y === exitPosition.y) {
+        alert('You Win!');
+        location.reload(); // Reload game after winning
+    }
+});
+
+// Initialize positions
+updatePlayerPosition();
+exit.style.transform = `translate(${exitPosition.x * (maze.offsetWidth / 10)}px, ${exitPosition.y * (maze.offsetHeight / 10)}px)`;
+
+// Shrinking Maze Feature
+let mazeSize = { width: maze.offsetWidth, height: maze.offsetHeight };
+
+const shrinkInterval = setInterval(() => {
+    if (mazeSize.width > 300 && mazeSize.height > 300) { // Minimum size limit
+        mazeSize.width -= 10;
+        mazeSize.height -= 10;
+
+        maze.style.width = `${mazeSize.width}px`;
+        maze.style.height = `${mazeSize.height}px`;
+
+        updatePlayerPosition();
+        exit.style.transform = `translate(${exitPosition.x * (mazeSize.width / 10)}px, ${exitPosition.y * (mazeSize.height / 10)}px)`;
+        
+    } else {
+        alert('Game Over! The maze has shrunk too small!');
+        clearInterval(shrinkInterval); // Stop shrinking when game over
+        location.reload(); // Reload game after losing
+    }
+}, 1000); // Shrink every second
+</script>
+</body>
+</html>
