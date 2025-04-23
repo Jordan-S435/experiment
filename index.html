@@ -1,139 +1,172 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sleek Maze Challenge</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Maze Pressure</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
-      background: #111;
+      background: #0f0f0f;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
       align-items: center;
+      justify-content: center;
       height: 100vh;
-      color: #eee;
       font-family: 'Arial', sans-serif;
+      color: #fff;
     }
 
     #maze {
       display: grid;
-      grid-template-columns: repeat(10, 1fr);
-      grid-template-rows: repeat(10, 1fr);
-      width: 500px;
-      height: 500px;
-      background-color: #1c1c1c;
-      border-radius: 16px;
-      overflow: hidden;
-      position: relative;
+      grid-template-columns: repeat(10, 40px);
+      grid-template-rows: repeat(10, 40px);
+      gap: 2px;
+      margin-bottom: 20px;
+    }
+
+    .cell {
+      width: 40px;
+      height: 40px;
+      background-color: rgba(50, 50, 50, 0.25);
+      transition: all 0.3s ease;
     }
 
     .wall {
-      background: #2a2a2a;
+      background-color: rgba(100, 100, 100, 0.45);
     }
 
-    #player, #exit {
-      position: absolute;
-      width: 10%;
-      height: 10%;
-      border-radius: 50%;
+    .player {
+      background-color: #4caf50 !important;
     }
 
-    #player {
-      background: #838282;
+    .goal {
+      background-color: #e91e63 !important;
     }
 
-    #exit {
-      background: rgb(42, 150, 42);
+    h1 {
+      margin: 10px;
+      font-size: 24px;
+    }
+
+    #gameover {
+      display: none;
+      font-size: 28px;
+      font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+      color: #f4433689;
     }
   </style>
 </head>
 <body>
-  <div id="maze">
-    <!-- Enhanced Maze Walls -->
-    <div class="wall" style="grid-column: 2; grid-row: 1;"></div>
-    <div class="wall" style="grid-column: 2; grid-row: 2;"></div>
-    <div class="wall" style="grid-column: 3; grid-row: 2;"></div>
-    <div class="wall" style="grid-column: 4; grid-row: 2;"></div>
-    <div class="wall" style="grid-column: 4; grid-row: 3;"></div>
-    <div class="wall" style="grid-column: 5; grid-row: 3;"></div>
-    <div class="wall" style="grid-column: 6; grid-row: 3;"></div>
-    <div class="wall" style="grid-column: 6; grid-row: 4;"></div>
-    <div class="wall" style="grid-column: 7; grid-row: 4;"></div>
-    <div class="wall" style="grid-column: 8; grid-row: 4;"></div>
-    <div class="wall" style="grid-column: 8; grid-row: 5;"></div>
-    <div class="wall" style="grid-column: 8; grid-row: 6;"></div>
-    <div class="wall" style="grid-column: 7; grid-row: 6;"></div>
-    <div class="wall" style="grid-column: 6; grid-row: 6;"></div>
-    <div class="wall" style="grid-column: 6; grid-row: 7;"></div>
-    <div class="wall" style="grid-column: 5; grid-row: 7;"></div>
-    <div class="wall" style="grid-column: 4; grid-row: 7;"></div>
-    <div class="wall" style="grid-column: 3; grid-row: 7;"></div>
-    <div class="wall" style="grid-column: 3; grid-row: 8;"></div>
-    <div class="wall" style="grid-column: 2; grid-row: 8;"></div>
-
-    <!-- Player and Exit -->
-    <div id="player"></div>
-    <div id="exit"></div>
-  </div>
+  <div id="maze"></div>
+  <div id="gameover">You Died</div>
 
   <script>
-    const player = document.getElementById('player');
-    const exit = document.getElementById('exit');
+    const mazeSize = 10;
     const maze = document.getElementById('maze');
-    const gridSize = 10;
+    const cells = [];
+    let wallGrowth = 0;
+    let interval;
+    
+    const player = { x: 0, y: 0 };
+    const goal = { x: 9, y: 9 };
 
-    let playerPos = { x: 0, y: 0 };
-    const exitPos = { x: 9, y: 9 };
+    let layout = [
+      [0,0,1,0,1,0,0,0,1,0],
+      [1,0,1,0,1,0,1,0,1,0],
+      [1,0,0,0,1,0,1,0,1,0],
+      [1,1,1,0,1,0,1,0,1,0],
+      [0,0,1,0,1,0,0,0,1,0],
+      [0,1,1,0,1,1,1,1,1,0],
+      [0,0,0,0,0,0,0,0,0,0],
+      [1,1,1,1,1,1,1,1,1,0],
+      [0,0,0,0,0,0,0,0,0,0],
+      [0,1,1,1,1,1,1,1,1,0],
+    ];
 
-    function updatePosition() {
-      const size = maze.offsetWidth / gridSize;
-      player.style.transform = `translate(${playerPos.x * size}px, ${playerPos.y * size}px)`;
-      exit.style.transform = `translate(${exitPos.x * size}px, ${exitPos.y * size}px)`;
+    function createMaze() {
+      maze.innerHTML = '';
+      for (let y = 0; y < mazeSize; y++) {
+        for (let x = 0; x < mazeSize; x++) {
+          const cell = document.createElement('div');
+          cell.classList.add('cell');
+          if (layout[y][x] === 1) cell.classList.add('wall');
+          if (player.x === x && player.y === y) cell.classList.add('player');
+          if (goal.x === x && goal.y === y) cell.classList.add('goal');
+          maze.appendChild(cell);
+          cells.push(cell);
+        }
+      }
     }
 
-    function canMove(x, y) {
-      if (x < 0 || y < 0 || x >= gridSize || y >= gridSize) return false;
-      const walls = document.querySelectorAll('.wall');
-      for (let wall of walls) {
-        const col = parseInt(wall.style.gridColumn);
-        const row = parseInt(wall.style.gridRow);
-        if (x + 1 === col && y + 1 === row) return false;
+    function updateMaze() {
+      for (let i = 0; i < mazeSize * mazeSize; i++) {
+        const x = i % mazeSize;
+        const y = Math.floor(i / mazeSize);
+        cells[i].className = 'cell';
+
+        if (layout[y][x] === 1) cells[i].classList.add('wall');
+        if (player.x === x && player.y === y) cells[i].classList.add('player');
+        if (goal.x === x && goal.y === y) cells[i].classList.add('goal');
       }
-      return true;
+    }
+
+    function movePlayer(dx, dy) {
+      const newX = player.x + dx;
+      const newY = player.y + dy;
+      if (
+        newX >= 0 &&
+        newX < mazeSize &&
+        newY >= 0 &&
+        newY < mazeSize &&
+        layout[newY][newX] === 0
+      ) {
+        player.x = newX;
+        player.y = newY;
+        updateMaze();
+
+        if (player.x === goal.x && player.y === goal.y) {
+          clearInterval(interval);
+          document.getElementById('gameover').textContent = 'You Win!';
+          document.getElementById('gameover').style.display = 'block';
+        }
+      }
+    }
+
+    function growWalls() {
+      wallGrowth++;
+      if (wallGrowth > 6) {
+        clearInterval(interval);
+        document.getElementById('gameover').style.display = 'block';
+        return;
+      }
+
+      for (let y = 0; y < mazeSize; y++) {
+        for (let x = 0; x < mazeSize; x++) {
+          if (Math.random() < 0.08 * wallGrowth && layout[y][x] === 0) {
+            layout[y][x] = 1;
+          }
+        }
+      }
+
+      updateMaze();
     }
 
     document.addEventListener('keydown', e => {
-      let { x, y } = playerPos;
-      if (e.key === 'ArrowUp' && canMove(x, y - 1)) y--;
-      else if (e.key === 'ArrowDown' && canMove(x, y + 1)) y++;
-      else if (e.key === 'ArrowLeft' && canMove(x - 1, y)) x--;
-      else if (e.key === 'ArrowRight' && canMove(x + 1, y)) x++;
-      playerPos = { x, y };
-      updatePosition();
-
-      if (x === exitPos.x && y === exitPos.y) {
-        alert('You escaped the maze!');
-        location.reload();
+      switch (e.key) {
+        case 'ArrowUp': movePlayer(0, -1); break;
+        case 'ArrowDown': movePlayer(0, 1); break;
+        case 'ArrowLeft': movePlayer(-1, 0); break;
+        case 'ArrowRight': movePlayer(1, 0); break;
       }
     });
 
-    updatePosition();
-
-    // Shrink Maze
-    let size = maze.offsetWidth;
-    const shrink = setInterval(() => {
-      if (size > 300) {
-        size -= 8;
-        maze.style.width = size + 'px';
-        maze.style.height = size + 'px';
-        updatePosition();
-      } else {
-        alert('The maze collapsed!');
-        clearInterval(shrink);
-        location.reload();
-      }
-    }, 900);
+    createMaze();
+    interval = setInterval(growWalls, 2000); // faster wall growth
   </script>
 </body>
 </html>
