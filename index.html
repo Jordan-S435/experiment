@@ -5,20 +5,72 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Maze Pressure</title>
   <style>
+    :root {
+      --background: #121212;
+      --surface: #1e1e1e;
+      --primary: #4caf50;
+      --primary-light: #81c784;
+      --secondary: #e91e63;
+      --secondary-light: #f48fb1;
+      --danger: #f44336;
+      --warning: #ff9800;
+      --text: #ffffff;
+      --text-secondary: rgba(255, 255, 255, 0.7);
+      --border: rgba(255, 255, 255, 0.12);
+    }
+
     * {
       box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
 
     body {
-      margin: 0;
-      background: #0f0f0f;
+      background: var(--background);
+      color: var(--text);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 100vh;
-      font-family: 'Arial', sans-serif;
-      color: #fff;
+      overflow: hidden;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+      padding: 20px;
+      max-width: 600px;
+      width: 100%;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 5px;
+      color: var(--text);
+    }
+
+    .subtitle {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      margin-bottom: 15px;
+    }
+
+    #game-area {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
     }
 
     #maze {
@@ -27,146 +79,882 @@
       grid-template-rows: repeat(10, 40px);
       gap: 2px;
       margin-bottom: 20px;
+      background-color: var(--surface);
+      border-radius: 6px;
+      padding: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     }
 
     .cell {
       width: 40px;
       height: 40px;
       background-color: rgba(50, 50, 50, 0.25);
+      border-radius: 4px;
       transition: all 0.3s ease;
     }
 
     .wall {
       background-color: rgba(100, 100, 100, 0.45);
+      box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
     }
 
     .player {
-      background-color: #4caf50 !important;
+      background-color: var(--primary) !important;
+      box-shadow: 0 0 10px var(--primary-light);
+      animation: pulse 1.5s infinite;
     }
 
     .goal {
-      background-color: #e91e63 !important;
+      background-color: var(--secondary) !important;
+      box-shadow: 0 0 10px var(--secondary-light);
+      animation: pulse 2s infinite;
     }
 
-    h1 {
-      margin: 10px;
-      font-size: 24px;
+    @keyframes pulse {
+      0% { opacity: 0.8; }
+      50% { opacity: 1; }
+      100% { opacity: 0.8; }
     }
 
-    #gameover {
+    #status-bar {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 440px;
+      margin-bottom: 15px;
+    }
+
+    #level-indicator {
+      font-size: 1rem;
+      padding: 8px 15px;
+      background-color: var(--surface);
+      border-radius: 20px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    #health-container {
+      flex-grow: 1;
+      height: 20px;
+      background-color: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+      margin: 0 15px;
+      overflow: hidden;
+    }
+
+    #health-bar {
+      height: 100%;
+      width: 100%;
+      background-color: var(--primary);
+      border-radius: 10px;
+      transition: width 0.5s ease-in-out;
+    }
+
+    #time-bar {
+      height: 5px;
+      width: 100%;
+      max-width: 440px;
+      background-color: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 15px;
+    }
+
+    #time-remaining {
+      height: 100%;
+      width: 100%;
+      background-color: var(--warning);
+      border-radius: 10px;
+      transition: width 0.1s linear;
+    }
+
+    #controls {
+      display: flex;
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .button {
+      background-color: var(--surface);
+      color: var(--text);
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .button:hover {
+      background-color: #2c2c2c;
+      transform: translateY(-2px);
+    }
+
+    .button.primary {
+      background-color: var(--primary);
+      color: #000;
+    }
+
+    .button.primary:hover {
+      background-color: var(--primary-light);
+    }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal-content {
+      background-color: var(--surface);
+      border-radius: 8px;
+      padding: 30px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      transform: translateY(-20px);
+      transition: transform 0.3s ease;
+    }
+
+    .modal.active .modal-content {
+      transform: translateY(0);
+    }
+
+    .modal h2 {
+      font-size: 1.5rem;
+      margin-bottom: 15px;
+      color: var(--text);
+    }
+
+    .modal p {
+      margin-bottom: 15px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    .level-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin: 20px 0;
+    }
+
+    .level-card {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 15px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 2px solid transparent;
+    }
+
+    .level-card:hover:not(.locked) {
+      background-color: rgba(255, 255, 255, 0.1);
+      transform: translateY(-3px);
+    }
+
+    .level-card.selected {
+      border-color: var(--primary);
+    }
+
+    .level-card.locked {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .level-card h3 {
+      font-size: 1.2rem;
+      margin-bottom: 5px;
+    }
+
+    .level-card .difficulty {
+      display: flex;
+      justify-content: center;
+      margin-top: 5px;
+    }
+
+    .level-card .difficulty span {
+      width: 10px;
+      height: 10px;
+      background-color: var(--primary);
+      border-radius: 50%;
+      margin: 0 2px;
+      opacity: 0.3;
+    }
+
+    .level-card .difficulty span.active {
+      opacity: 1;
+    }
+
+    #game-over {
       display: none;
-      font-size: 28px;
-      font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
-      color: #f4433689;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(0, 0, 0, 0.8);
+      padding: 20px 40px;
+      border-radius: 8px;
+      text-align: center;
+      z-index: 5;
+    }
+
+    #game-over h2 {
+      font-size: 2rem;
+      margin-bottom: 15px;
+    }
+
+    #game-over.success h2 {
+      color: var(--primary);
+    }
+
+    #game-over.failure h2 {
+      color: var(--danger);
+    }
+
+    .mobile-controls {
+      display: none;
+      grid-template-areas: 
+        ". up ."
+        "left . right"
+        ". down .";
+      grid-template-columns: 60px 60px 60px;
+      grid-template-rows: 60px 60px 60px;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .mobile-controls button {
+      background-color: var(--surface);
+      border: none;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      color: var(--text);
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .mobile-controls button:active {
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .mobile-controls .up { grid-area: up; }
+    .mobile-controls .down { grid-area: down; }
+    .mobile-controls .left { grid-area: left; }
+    .mobile-controls .right { grid-area: right; }
+
+    @media (max-width: 500px) {
+      #maze {
+        grid-template-columns: repeat(10, 30px);
+        grid-template-rows: repeat(10, 30px);
+        gap: 1px;
+      }
+      
+      .cell {
+        width: 30px;
+        height: 30px;
+      }
+
+      .mobile-controls {
+        display: grid;
+      }
+
+      h1 {
+        font-size: 1.8rem;
+      }
+    }
+
+    @media (max-width: 360px) {
+      #maze {
+        grid-template-columns: repeat(10, 25px);
+        grid-template-rows: repeat(10, 25px);
+      }
+      
+      .cell {
+        width: 25px;
+        height: 25px;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+      }
     }
   </style>
 </head>
 <body>
-  <div id="maze"></div>
-  <div id="gameover">You Died</div>
+  <div class="container">
+    <header>
+      <h1>Maze Pressure</h1>
+      <div class="subtitle">Escape before the walls close in!</div>
+    </header>
+
+    <div id="game-area">
+      <div id="status-bar">
+        <div id="level-indicator">Level 1</div>
+        <div id="health-container">
+          <div id="health-bar"></div>
+        </div>
+      </div>
+
+      <div id="time-bar">
+        <div id="time-remaining"></div>
+      </div>
+
+      <div id="maze"></div>
+
+      <div id="controls">
+        <button id="instructions-btn" class="button">How to Play</button>
+        <button id="levels-btn" class="button">Levels</button>
+        <button id="restart-btn" class="button primary">Restart</button>
+      </div>
+
+      <div class="mobile-controls">
+        <button class="up">↑</button>
+        <button class="left">←</button>
+        <button class="right">→</button>
+        <button class="down">↓</button>
+      </div>
+
+      <div id="game-over">
+        <h2>Game Over</h2>
+        <button id="continue-btn" class="button primary">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Instructions Modal -->
+  <div id="instructions-modal" class="modal">
+    <div class="modal-content">
+      <h2>How to Play</h2>
+      <p><strong>Objective:</strong> Navigate the green player to the pink goal before your health runs out or the walls block your path.</p>
+      <p><strong>Controls:</strong> Use the arrow keys (↑ ↓ ← →) to move your player through the maze.</p>
+      <p><strong>Health:</strong> Your health decreases whenever you get trapped by walls. If your health reaches zero, it's game over!</p>
+      <p><strong>Time Pressure:</strong> Walls will grow randomly over time, making the maze more difficult. The speed increases with each level.</p>
+      <p><strong>Levels:</strong> There are three levels with increasing difficulty. Complete all levels to win the game!</p>
+      <div class="modal-footer">
+        <button class="button primary close-modal">Got it!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Levels Modal -->
+  <div id="levels-modal" class="modal">
+    <div class="modal-content">
+      <h2>Select Level</h2>
+      <div class="level-grid">
+        <div class="level-card selected" data-level="1">
+          <h3>Level 1</h3>
+          <p>Beginner</p>
+          <div class="difficulty">
+            <span class="active"></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+        <div class="level-card locked" data-level="2">
+          <h3>Level 2</h3>
+          <p>Intermediate</p>
+          <div class="difficulty">
+            <span class="active"></span>
+            <span class="active"></span>
+            <span></span>
+          </div>
+        </div>
+        <div class="level-card locked" data-level="3">
+          <h3>Level 3</h3>
+          <p>Advanced</p>
+          <div class="difficulty">
+            <span class="active"></span>
+            <span class="active"></span>
+            <span class="active"></span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="button primary close-modal">Close</button>
+      </div>
+    </div>
+  </div>
 
   <script>
-    const mazeSize = 10;
-    const maze = document.getElementById('maze');
-    const cells = [];
-    let wallGrowth = 0;
-    let interval;
-    
-    const player = { x: 0, y: 0 };
-    const goal = { x: 9, y: 9 };
+    // Game state variables
+    let currentLevel = 1;
+    let unlockedLevels = [1];
+    let health = 100;
+    let maxHealth = 100;
+    let mazeSize = 10;
+    let maze, cells;
+    let player, goal;
+    let wallGrowthInterval, timeBarInterval;
+    let wallGrowthSpeed, wallChance, timeLimit;
+    let isGameActive = false;
+    let didPlayerWin = false;
 
-    let layout = [
-      [0,0,1,0,1,0,0,0,1,0],
-      [1,0,1,0,1,0,1,0,1,0],
-      [1,0,0,0,1,0,1,0,1,0],
-      [1,1,1,0,1,0,1,0,1,0],
-      [0,0,1,0,1,0,0,0,1,0],
-      [0,1,1,0,1,1,1,1,1,0],
-      [0,0,0,0,0,0,0,0,0,0],
-      [1,1,1,1,1,1,1,1,1,0],
-      [0,0,0,0,0,0,0,0,0,0],
-      [0,1,1,1,1,1,1,1,1,0],
-    ];
-
-    function createMaze() {
-      maze.innerHTML = '';
-      for (let y = 0; y < mazeSize; y++) {
-        for (let x = 0; x < mazeSize; x++) {
-          const cell = document.createElement('div');
-          cell.classList.add('cell');
-          if (layout[y][x] === 1) cell.classList.add('wall');
-          if (player.x === x && player.y === y) cell.classList.add('player');
-          if (goal.x === x && goal.y === y) cell.classList.add('goal');
-          maze.appendChild(cell);
-          cells.push(cell);
-        }
+    // Level layouts (0 = path, 1 = wall)
+    const levels = {
+      1: {
+        layout: [
+          [0,0,0,0,0,1,0,0,0,0],
+          [1,1,1,1,0,1,0,1,1,0],
+          [0,0,0,0,0,0,0,0,0,0],
+          [0,1,1,1,1,1,1,1,1,0],
+          [0,0,0,0,0,0,0,0,0,0],
+          [1,1,1,1,0,1,1,1,1,0],
+          [0,0,0,0,0,0,0,0,0,0],
+          [0,1,1,1,1,1,1,1,1,0],
+          [0,0,0,0,0,0,0,0,0,0],
+          [1,1,1,1,0,1,1,1,1,0],
+        ],
+        wallGrowthSpeed: 3500,
+        wallChance: 0.05,
+        timeLimit: 40000,
+        startPos: { x: 0, y: 0 },
+        goalPos: { x: 9, y: 9 }
+      },
+      2: {
+        layout: [
+          [0,0,0,0,0,0,0,0,0,0],
+          [0,1,1,1,1,1,1,1,1,0],
+          [0,0,0,0,0,0,0,0,0,0],
+          [1,1,1,1,0,1,1,1,1,0],
+          [0,0,0,0,0,0,0,0,0,0],
+          [0,1,1,1,1,1,1,1,1,0],
+          [0,0,0,0,0,0,0,0,0,0],
+          [1,1,1,1,0,1,1,1,1,0],
+          [0,0,0,0,0,0,0,0,0,0],
+          [0,1,1,1,1,1,1,1,1,0],
+        ],
+        wallGrowthSpeed: 2500,
+        wallChance: 0.08,
+        timeLimit: 35000,
+        startPos: { x: 0, y: 0 },
+        goalPos: { x: 9, y: 9 }
+      },
+      3: {
+        layout: [
+          [0,0,0,0,0,0,0,0,0,0],
+          [1,1,1,1,0,1,1,1,1,0],
+          [0,0,0,0,0,0,0,0,0,0],
+          [0,1,1,1,1,1,1,1,1,0],
+          [0,0,0,0,0,0,0,0,0,0],
+          [1,1,1,1,0,1,1,1,1,0],
+          [0,0,0,0,0,0,0,0,0,0],
+          [0,1,1,1,1,1,1,1,1,0],
+          [0,0,0,0,0,0,0,0,0,0],
+          [1,1,1,1,0,1,1,1,1,0],
+        ],
+        wallGrowthSpeed: 1800,
+        wallChance: 0.12,
+        timeLimit: 30000,
+        startPos: { x: 0, y: 0 },
+        goalPos: { x: 9, y: 9 }
       }
+    };
+
+    // DOM elements
+    const mazeContainer = document.getElementById('maze');
+    const healthBar = document.getElementById('health-bar');
+    const levelIndicator = document.getElementById('level-indicator');
+    const timeRemainingBar = document.getElementById('time-remaining');
+    const gameOver = document.getElementById('game-over');
+    const gameOverTitle = gameOver.querySelector('h2');
+    const continueBtn = document.getElementById('continue-btn');
+    const instructionsModal = document.getElementById('instructions-modal');
+    const levelsModal = document.getElementById('levels-modal');
+    const levelCards = document.querySelectorAll('.level-card');
+    const restartBtn = document.getElementById('restart-btn');
+    const instructionsBtn = document.getElementById('instructions-btn');
+    const levelsBtn = document.getElementById('levels-btn');
+    const closeModalBtns = document.querySelectorAll('.close-modal');
+    const mobileControls = document.querySelectorAll('.mobile-controls button');
+
+    // Initialize the game
+    function init() {
+      // Show instructions on first visit
+      if (!localStorage.getItem('hasPlayedBefore')) {
+        setTimeout(() => {
+          toggleModal(instructionsModal, true);
+          localStorage.setItem('hasPlayedBefore', 'true');
+        }, 500);
+      }
+      
+      // Set up event listeners
+      setupEventListeners();
+      
+      // Start the game with level 1
+      startLevel(1);
     }
 
-    function updateMaze() {
-      for (let i = 0; i < mazeSize * mazeSize; i++) {
-        const x = i % mazeSize;
-        const y = Math.floor(i / mazeSize);
-        cells[i].className = 'cell';
-
-        if (layout[y][x] === 1) cells[i].classList.add('wall');
-        if (player.x === x && player.y === y) cells[i].classList.add('player');
-        if (goal.x === x && goal.y === y) cells[i].classList.add('goal');
-      }
+    // Set up all event listeners
+    function setupEventListeners() {
+      // Keyboard controls
+      document.addEventListener('keydown', handleKeyPress);
+      
+      // Button clicks
+      restartBtn.addEventListener('click', () => restartLevel());
+      instructionsBtn.addEventListener('click', () => toggleModal(instructionsModal, true));
+      levelsBtn.addEventListener('click', () => toggleModal(levelsModal, true));
+      continueBtn.addEventListener('click', handleContinue);
+      
+      // Close modals
+      closeModalBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const modal = e.target.closest('.modal');
+          toggleModal(modal, false);
+        });
+      });
+      
+      // Level selection
+      levelCards.forEach(card => {
+        card.addEventListener('click', () => {
+          if (card.classList.contains('locked')) return;
+          
+          const selectedLevel = parseInt(card.dataset.level);
+          levelCards.forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+          
+          toggleModal(levelsModal, false);
+          startLevel(selectedLevel);
+        });
+      });
+      
+      // Mobile controls
+      mobileControls.forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (btn.classList.contains('up')) movePlayer(0, -1);
+          if (btn.classList.contains('down')) movePlayer(0, 1);
+          if (btn.classList.contains('left')) movePlayer(-1, 0);
+          if (btn.classList.contains('right')) movePlayer(1, 0);
+        });
+      });
     }
 
-    function movePlayer(dx, dy) {
-      const newX = player.x + dx;
-      const newY = player.y + dy;
-      if (
-        newX >= 0 &&
-        newX < mazeSize &&
-        newY >= 0 &&
-        newY < mazeSize &&
-        layout[newY][newX] === 0
-      ) {
-        player.x = newX;
-        player.y = newY;
-        updateMaze();
-
-        if (player.x === goal.x && player.y === goal.y) {
-          clearInterval(interval);
-          document.getElementById('gameover').textContent = 'You Win!';
-          document.getElementById('gameover').style.display = 'block';
-        }
-      }
-    }
-
-    function growWalls() {
-      wallGrowth++;
-      if (wallGrowth > 6) {
-        clearInterval(interval);
-        document.getElementById('gameover').style.display = 'block';
-        return;
-      }
-
-      for (let y = 0; y < mazeSize; y++) {
-        for (let x = 0; x < mazeSize; x++) {
-          if (Math.random() < 0.08 * wallGrowth && layout[y][x] === 0) {
-            layout[y][x] = 1;
-          }
-        }
-      }
-
-      updateMaze();
-    }
-
-    document.addEventListener('keydown', e => {
+    // Handle keyboard input
+    function handleKeyPress(e) {
+      if (!isGameActive) return;
+      
       switch (e.key) {
         case 'ArrowUp': movePlayer(0, -1); break;
         case 'ArrowDown': movePlayer(0, 1); break;
         case 'ArrowLeft': movePlayer(-1, 0); break;
         case 'ArrowRight': movePlayer(1, 0); break;
       }
-    });
+    }
 
-    createMaze();
-    interval = setInterval(growWalls, 2000); // faster wall growth
+    // Toggle modal visibility
+    function toggleModal(modal, show) {
+      if (show) {
+        modal.classList.add('active');
+      } else {
+        modal.classList.remove('active');
+      }
+    }
+
+    // Start a specific level
+    function startLevel(level) {
+      // Clear any existing intervals
+      clearInterval(wallGrowthInterval);
+      clearInterval(timeBarInterval);
+      
+      // Update current level
+      currentLevel = level;
+      levelIndicator.textContent = `Level ${level}`;
+      
+      // Reset game state
+      isGameActive = true;
+      didPlayerWin = false;
+      health = maxHealth;
+      updateHealthBar();
+      
+      // Get level configuration
+      const levelConfig = levels[level];
+      const layout = JSON.parse(JSON.stringify(levelConfig.layout)); // Deep copy
+      wallGrowthSpeed = levelConfig.wallGrowthSpeed;
+      wallChance = levelConfig.wallChance;
+      timeLimit = levelConfig.timeLimit;
+      
+      // Set player and goal positions
+      player = { ...levelConfig.startPos };
+      goal = { ...levelConfig.goalPos };
+      
+      // Create the maze
+      createMaze(layout);
+      
+      // Hide game over screen
+      gameOver.style.display = 'none';
+      
+      // Start wall growth and timer
+      startWallGrowth();
+      startTimeBar();
+    }
+
+    // Create the maze grid based on the level layout
+    function createMaze(layout) {
+      mazeContainer.innerHTML = '';
+      cells = [];
+      
+      for (let y = 0; y < mazeSize; y++) {
+        for (let x = 0; x < mazeSize; x++) {
+          const cell = document.createElement('div');
+          cell.classList.add('cell');
+          
+          if (layout[y][x] === 1) cell.classList.add('wall');
+          if (player.x === x && player.y === y) cell.classList.add('player');
+          if (goal.x === x && goal.y === y) cell.classList.add('goal');
+          
+          mazeContainer.appendChild(cell);
+          cells.push(cell);
+        }
+      }
+    }
+
+    // Update the maze display
+    function updateMaze() {
+      for (let i = 0; i < mazeSize * mazeSize; i++) {
+        const x = i % mazeSize;
+        const y = Math.floor(i / mazeSize);
+        cells[i].className = 'cell';
+
+        if (levels[currentLevel].layout[y][x] === 1) cells[i].classList.add('wall');
+        if (player.x === x && player.y === y) cells[i].classList.add('player');
+        if (goal.x === x && goal.y === y) cells[i].classList.add('goal');
+      }
+    }
+
+    // Move the player
+    function movePlayer(dx, dy) {
+      if (!isGameActive) return;
+      
+      const newX = player.x + dx;
+      const newY = player.y + dy;
+      
+      // Check if move is valid
+      if (
+        newX >= 0 &&
+        newX < mazeSize &&
+        newY >= 0 &&
+        newY < mazeSize &&
+        levels[currentLevel].layout[newY][newX] === 0
+      ) {
+        player.x = newX;
+        player.y = newY;
+        updateMaze();
+
+        // Check win condition
+        if (player.x === goal.x && player.y === goal.y) {
+          handleLevelComplete();
+        }
+      }
+    }
+
+    // Start random wall growth
+    function startWallGrowth() {
+      wallGrowthInterval = setInterval(() => {
+        growWalls();
+        checkIfTrapped();
+      }, wallGrowthSpeed);
+    }
+
+    // Add walls randomly
+    function growWalls() {
+      let wallsAdded = false;
+      
+      for (let y = 0; y < mazeSize; y++) {
+        for (let x = 0; x < mazeSize; x++) {
+          // Skip player and goal positions
+          if ((x === player.x && y === player.y) || (x === goal.x && y === goal.y)) {
+            continue;
+          }
+          
+          // Random chance to add a wall
+          if (Math.random() < wallChance && levels[currentLevel].layout[y][x] === 0) {
+            levels[currentLevel].layout[y][x] = 1;
+            wallsAdded = true;
+          }
+        }
+      }
+      
+      if (wallsAdded) {
+        updateMaze();
+      }
+    }
+
+    // Check if player is trapped
+    function checkIfTrapped() {
+      const { x, y } = player;
+      const directions = [
+        { dx: 0, dy: -1 }, // up
+        { dx: 0, dy: 1 },  // down
+        { dx: -1, dy: 0 }, // left
+        { dx: 1, dy: 0 }   // right
+      ];
+      
+      // Check all four directions
+      let isTrapped = true;
+      for (const dir of directions) {
+        const newX = x + dir.dx;
+        const newY = y + dir.dy;
+        
+        if (
+          newX >= 0 &&
+          newX < mazeSize &&
+          newY >= 0 &&
+          newY < mazeSize &&
+          levels[currentLevel].layout[newY][newX] === 0
+        ) {
+          isTrapped = false;
+          break;
+        }
+      }
+      
+      // Reduce health if trapped
+      if (isTrapped) {
+        reduceHealth(20);
+      }
+    }
+
+    // Reduce player health
+    function reduceHealth(amount) {
+      health -= amount;
+      if (health <= 0) {
+        health = 0;
+        handleGameOver(false);
+      }
+      updateHealthBar();
+    }
+
+    // Update health bar display
+    function updateHealthBar() {
+      const healthPercent = (health / maxHealth) * 100;
+      healthBar.style.width = `${healthPercent}%`;
+      
+      // Change color based on health
+      if (healthPercent > 60) {
+        healthBar.style.backgroundColor = 'var(--primary)';
+      } else if (healthPercent > 30) {
+        healthBar.style.backgroundColor = 'var(--warning)';
+      } else {
+        healthBar.style.backgroundColor = 'var(--danger)';
+      }
+    }
+
+    // Start time bar countdown
+    function startTimeBar() {
+      let timeRemaining = timeLimit;
+      const updateInterval = 100; // Update every 100ms for smooth animation
+      
+      timeRemainingBar.style.width = '100%';
+      
+      timeBarInterval = setInterval(() => {
+        timeRemaining -= updateInterval;
+        const percentRemaining = (timeRemaining / timeLimit) * 100;
+        timeRemainingBar.style.width = `${percentRemaining}%`;
+        
+        if (timeRemaining <= 0) {
+          clearInterval(timeBarInterval);
+          handleGameOver(false);
+        }
+      }, updateInterval);
+    }
+
+    // Handle level completion
+    function handleLevelComplete() {
+      isGameActive = false;
+      didPlayerWin = true;
+      clearInterval(wallGrowthInterval);
+      clearInterval(timeBarInterval);
+      
+      // Show completion message
+      gameOver.className = 'success';
+      gameOverTitle.textContent = `Level ${currentLevel} Complete!`;
+      gameOver.style.display = 'block';
+      
+      // Unlock next level if applicable
+      if (currentLevel < 3 && !unlockedLevels.includes(currentLevel + 1)) {
+        unlockedLevels.push(currentLevel + 1);
+        updateUnlockedLevels();
+      }
+    }
+
+    // Handle game over
+    function handleGameOver(success) {
+      isGameActive = false;
+      didPlayerWin = success;
+      clearInterval(wallGrowthInterval);
+      
+      clearInterval(timeBarInterval);
+      
+      // Show game over message
+      gameOver.className = success ? 'success' : 'failure';
+      gameOverTitle.textContent = success ? 'You Win!' : 'Game Over';
+      gameOver.style.display = 'block';
+    }
+
+    // Handle continue button click
+    function handleContinue() {
+      if (didPlayerWin) {
+        if (currentLevel < 3) {
+          // Move to next level
+          startLevel(currentLevel + 1);
+        } else {
+          // Game complete
+          gameOverTitle.textContent = 'All Levels Complete!';
+          continueBtn.textContent = 'Play Again';
+          continueBtn.onclick = () => startLevel(1);
+        }
+      } else {
+        // Restart current level
+        restartLevel();
+      }
+    }
+
+    // Restart the current level
+    function restartLevel() {
+      startLevel(currentLevel);
+    }
+
+    // Update unlocked levels display
+    function updateUnlockedLevels() {
+      levelCards.forEach(card => {
+        const level = parseInt(card.dataset.level);
+        if (unlockedLevels.includes(level)) {
+          card.classList.remove('locked');
+        }
+      });
+    }
+
+    // Initialize game
+    window.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
 </html>
